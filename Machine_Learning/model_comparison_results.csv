@@ -1,0 +1,5 @@
+Model,Train_MAE,Test_MAE,Train_RMSE,Test_RMSE,Train_R2,Test_R2,Test_MAPE_%,Fit_Time_s
+1. Linear Regression (Ridge),65.41,65.54,102.77,102.91,0.3702,0.3767,34.43,0.15
+2. Random Forest Regressor,61.67,62.03,99.74,100.47,0.4067,0.406,32.56,56.48
+3. Gradient Boosting (Baseline),59.32,59.77,96.73,97.66,0.4421,0.4387,31.37,50.4
+4. Tuned Gradient Boosting (Best),50.45,53.82,84.35,90.81,0.5757,0.5147,27.95,234.64

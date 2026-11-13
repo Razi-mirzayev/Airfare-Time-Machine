@@ -1,0 +1,41 @@
+{
+  "name": "Airfare Time Machine Executive Theme",
+  "dataColors": [
+    "#1D3557",
+    "#2A9D8F",
+    "#E63946",
+    "#457B9D",
+    "#F4A261",
+    "#E9C46A",
+    "#264653",
+    "#A8DADC"
+  ],
+  "background": "#F8FAFC",
+  "foreground": "#0F172A",
+  "tableAccent": "#1D3557",
+  "good": "#2A9D8F",
+  "neutral": "#F4A261",
+  "bad": "#E63946",
+  "textClasses": {
+    "callout": {
+      "fontSize": 26,
+      "fontFace": "Segoe UI Semibold",
+      "color": "#1D3557"
+    },
+    "title": {
+      "fontSize": 13,
+      "fontFace": "Segoe UI Semibold",
+      "color": "#0F172A"
+    },
+    "header": {
+      "fontSize": 11,
+      "fontFace": "Segoe UI Semibold",
+      "color": "#1E293B"
+    },
+    "label": {
+      "fontSize": 10,
+      "fontFace": "Segoe UI",
+      "color": "#475569"
+    }
+  }
+}

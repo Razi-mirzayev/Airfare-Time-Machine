@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Airfare Time Machine – Interactive BI Dashboard</title>
+<style>
+  :root {
+    --bg: #f1f5f9;
+    --card: #ffffff;
+    --navy: #0f172a;
+    --primary: #1d3557;
+    --teal: #2a9d8f;
+    --red: #e63946;
+    --blue: #457b9d;
+    --amber: #f4a261;
+    --text: #1e293b;
+    --muted: #64748b;
+    --border: #cbd5e1;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+  body { background: var(--bg); color: var(--text); padding-bottom: 32px; }
+  header {
+    background: var(--navy); color: #fff; padding: 16px 28px;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+  }
+  header h1 { font-size: 1.25rem; letter-spacing: 0.4px; }
+  header p { font-size: 0.82rem; color: #94a3b8; margin-top: 3px; }
+  .slicers { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .slicer-group { display: flex; align-items: center; gap: 6px; background: #1e293b; padding: 6px 12px; border-radius: 6px; border: 1px solid #38bdf8; }
+  .slicer-group label { font-size: 0.78rem; color: #94a3b8; font-weight: 600; }
+  .slicer-group select { background: transparent; color: #fff; border: none; font-size: 0.85rem; font-weight: 600; outline: none; cursor: pointer; }
+  .slicer-group select option { background: var(--navy); color: #fff; }
+  .container { max-width: 1440px; margin: 18px auto; padding: 0 20px; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-bottom: 18px; }
+  .kpi-card {
+    background: var(--card); border-radius: 8px; padding: 14px 16px;
+    border: 1px solid var(--border); border-top: 4px solid var(--primary);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .kpi-card.teal { border-top-color: var(--teal); }
+  .kpi-card.red { border-top-color: var(--red); }
+  .kpi-card.blue { border-top-color: var(--blue); }
+  .kpi-title { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .kpi-value { font-size: 1.55rem; font-weight: 700; color: var(--primary); margin: 6px 0 4px; }
+  .kpi-card.teal .kpi-value { color: var(--teal); }
+  .kpi-card.red .kpi-value { color: var(--red); }
+  .kpi-sub { font-size: 0.75rem; color: var(--muted); }
+  .visual-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
+  .panel {
+    background: var(--card); border-radius: 8px; padding: 16px 18px;
+    border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .col-6 { grid-column: span 6; }
+  .col-4 { grid-column: span 4; }
+  .col-8 { grid-column: span 8; }
+  .panel h3 { font-size: 0.95rem; color: var(--navy); margin-bottom: 12px; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; }
+  .bar-row { display: flex; align-items: center; margin-bottom: 8px; font-size: 0.82rem; }
+  .bar-label { width: 145px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-track { flex: 1; background: #f1f5f9; height: 20px; border-radius: 4px; overflow: hidden; margin: 0 10px; }
+  .bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s ease; }
+  .bar-val { width: 68px; text-align: right; font-weight: 700; color: var(--navy); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+  th { background: #f8fafc; color: var(--muted); font-weight: 700; text-transform: uppercase; font-size: 0.73rem; }
+  .badge { padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 700; }
+  .badge-short { background: #d1fae5; color: #065f46; }
+  .badge-med { background: #fef3c7; color: #92400e; }
+  .badge-long { background: #fee2e2; color: #991b1b; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>AIRFARE TIME MACHINE &nbsp;|&nbsp; US FLIGHT PRICE ANALYTICS</h1>
+    <p>Interactive BI Executive View • 38,584,829 Flight Observations • 1,683,033 Daily Summaries • 50 Routes</p>
+  </div>
+  <div class="slicers">
+    <div class="slicer-group">
+      <label for="haulSelect">Haul Category:</label>
+      <select id="haulSelect" onchange="updateDashboard()">
+        <option value="ALL">All Routes (50)</option>
+        <option value="SHORT">Short-Haul (&lt;500 mi)</option>
+        <option value="MEDIUM">Medium-Haul (500–1500 mi)</option>
+        <option value="LONG">Long-Haul (&gt;1500 mi)</option>
+      </select>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-title">Average Ticket Price</div>
+      <div class="kpi-value" id="kpiAvg">$209.85</div>
+      <div class="kpi-sub" id="kpiAvgSub">Daily Median Avg: $195.77</div>
+    </div>
+    <div class="kpi-card teal">
+      <div class="kpi-title">Cheapest Flight</div>
+      <div class="kpi-value" id="kpiMin">$19.00</div>
+      <div class="kpi-sub" id="kpiMinSub">Frontier Airlines (ULCC)</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-title">Most Expensive Flight</div>
+      <div class="kpi-value" id="kpiMax">$5,046.00</div>
+      <div class="kpi-sub" id="kpiMaxSub">Last-Minute Peak Fare</div>
+    </div>
+    <div class="kpi-card teal">
+      <div class="kpi-title">Sweet Spot (31–60d)</div>
+      <div class="kpi-value" id="kpiSweet">$185.40</div>
+      <div class="kpi-sub" id="kpiSweetSub">Saves $98.67 vs Last Minute</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-title">Avg Yield ($ / Mile)</div>
+      <div class="kpi-value" id="kpiYield">$0.2090</div>
+      <div class="kpi-sub" id="kpiYieldSub">Economies of Distance</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-title">Direct (Nonstop) Share</div>
+      <div class="kpi-value" id="kpiNonstop">90.14%</div>
+      <div class="kpi-sub" id="kpiNonstopSub">Avg Nonstop Premium: +$14.09</div>
+    </div>
+  </div>
+
+  <div class="visual-grid">
+    <div class="panel col-6">
+      <h3>Booking Window Analysis (Median Price by Days Before Departure)</h3>
+      <div id="bookingBars"></div>
+    </div>
+    <div class="panel col-6">
+      <h3>Airline Price Comparison & Market Positioning (Avg Ticket Price $)</h3>
+      <div id="airlineBars"></div>
+    </div>
+    <div class="panel col-4">
+      <h3>Departure Day-of-Week Median Fare ($)</h3>
+      <div id="dowBars"></div>
+    </div>
+    <div class="panel col-8">
+      <h3>Route Performance Explorer (Cheapest & Most Expensive Routes in Scope)</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Route</th>
+            <th>Cities</th>
+            <th>Haul</th>
+            <th>Distance</th>
+            <th>Airlines</th>
+            <th>Nonstop %</th>
+            <th>Median ($)</th>
+            <th>$/Mile</th>
+          </tr>
+        </thead>
+        <tbody id="routeTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const HAUL_DATA = {
+  ALL: {
+    avg: "$209.85", avgSub: "Daily Median Avg: $195.77",
+    min: "$19.00", minSub: "Frontier Airlines (ULCC)",
+    max: "$5,046.00", maxSub: "American Airlines (Last-Min)",
+    sweet: "$185.40", sweetSub: "Saves $98.67 (-34.7%) vs 7-14d",
+    yield: "$0.2090", yieldSub: "Avg Distance: 1,222 miles",
+    nonstop: "90.14%", nonstopSub: "Avg Nonstop Premium: +$14.09",
+    booking: [
+      { label: "7–14 Days (Last Min)", val: 284.07, col: "#e63946" },
+      { label: "15–30 Days (Short)", val: 215.75, col: "#f4a261" },
+      { label: "31–60 Days (Sweet Spot)", val: 185.40, col: "#2a9d8f" },
+      { label: "61–90 Days (Optimal)", val: 186.39, col: "#2a9d8f" },
+      { label: "91–120 Days (Early)", val: 190.83, col: "#457b9d" },
+      { label: "121–180 Days (Far Adv)", val: 191.00, col: "#457b9d" }
+    ]
+  },
+  SHORT: {
+    avg: "$136.40", avgSub: "10 Short-Haul Routes (<500 mi)",
+    min: "$19.00", minSub: "LAS-LAX / LAX-SFO Promo",
+    max: "$1,460.00", maxSub: "Last-Minute Peak",
+    sweet: "$123.00", sweetSub: "Saves $87.16 (-41.5%) vs 7-14d",
+    yield: "$0.3954", yieldSub: "Avg Distance: 335 miles",
+    nonstop: "98.35%", nonstopSub: "Almost 100% Direct Flights",
+    booking: [
+      { label: "7–14 Days (Last Min)", val: 210.16, col: "#e63946" },
+      { label: "15–30 Days (Short)", val: 149.80, col: "#f4a261" },
+      { label: "31–60 Days (Sweet Spot)", val: 123.00, col: "#2a9d8f" },
+      { label: "61–90 Days (Optimal)", val: 124.50, col: "#2a9d8f" },
+      { label: "91–120 Days (Early)", val: 128.10, col: "#457b9d" },
+      { label: "121–180 Days (Far Adv)", val: 129.71, col: "#457b9d" }
+    ]
+  },
+  MEDIUM: {
+    avg: "$178.50", avgSub: "24 Medium-Haul Routes (500-1500 mi)",
+    min: "$25.00", minSub: "Frontier / Spirit Bare Fare",
+    max: "$3,593.00", maxSub: "Last-Minute Peak",
+    sweet: "$163.17", sweetSub: "Saves $106.02 (-39.4%) vs 7-14d",
+    yield: "$0.1922", yieldSub: "Avg Distance: 891 miles",
+    nonstop: "92.86%", nonstopSub: "Strong Hub-to-Hub Directs",
+    booking: [
+      { label: "7–14 Days (Last Min)", val: 269.19, col: "#e63946" },
+      { label: "15–30 Days (Short)", val: 198.40, col: "#f4a261" },
+      { label: "31–60 Days (Sweet Spot)", val: 163.17, col: "#2a9d8f" },
+      { label: "61–90 Days (Optimal)", val: 165.20, col: "#2a9d8f" },
+      { label: "91–120 Days (Early)", val: 171.80, col: "#457b9d" },
+      { label: "121–180 Days (Far Adv)", val: 173.96, col: "#457b9d" }
+    ]
+  },
+  LONG: {
+    avg: "$264.20", avgSub: "16 Long-Haul Routes (>1500 mi)",
+    min: "$49.00", minSub: "Off-Peak Transcontinental",
+    max: "$5,046.00", maxSub: "Transcon Last-Minute",
+    sweet: "$257.77", sweetSub: "Saves $94.72 (-26.9%) vs 7-14d",
+    yield: "$0.1104", yieldSub: "Avg Distance: 2,273 miles",
+    nonstop: "78.04%", nonstopSub: "High Connecting Competition",
+    booking: [
+      { label: "7–14 Days (Last Min)", val: 352.49, col: "#e63946" },
+      { label: "15–30 Days (Short)", val: 282.10, col: "#f4a261" },
+      { label: "31–60 Days (Sweet Spot)", val: 257.77, col: "#2a9d8f" },
+      { label: "61–90 Days (Optimal)", val: 256.40, col: "#2a9d8f" },
+      { label: "91–120 Days (Early)", val: 255.80, col: "#2a9d8f" },
+      { label: "121–180 Days (Far Adv)", val: 254.92, col: "#2a9d8f" }
+    ]
+  }
+};
+
+const AIRLINES = [
+  { label: "Frontier (ULCC)", val: 131.05, col: "#2a9d8f" },
+  { label: "Spirit (ULCC)", val: 134.26, col: "#2a9d8f" },
+  { label: "Southwest (LCC)", val: 155.81, col: "#f4a261" },
+  { label: "Alaska (Legacy)", val: 191.02, col: "#457b9d" },
+  { label: "United (Legacy)", val: 204.75, col: "#1d3557" },
+  { label: "American (Legacy)", val: 225.58, col: "#1d3557" },
+  { label: "Delta (Legacy)", val: 231.27, col: "#1d3557" },
+  { label: "JetBlue (LCC)", val: 254.04, col: "#f4a261" }
+];
+
+const DOWS = [
+  { label: "Monday", val: 204.31, col: "#457b9d" },
+  { label: "Tuesday (Cheapest)", val: 163.19, col: "#2a9d8f" },
+  { label: "Wednesday", val: 165.75, col: "#2a9d8f" },
+  { label: "Thursday", val: 191.63, col: "#457b9d" },
+  { label: "Friday", val: 203.92, col: "#f4a261" },
+  { label: "Saturday", val: 190.79, col: "#457b9d" },
+  { label: "Sunday (Peak)", val: 250.79, col: "#e63946" }
+];
+
+const ROUTES = [
+  { r: "LAX-SFO", c: "Los Angeles -> San Francisco", h: "SHORT", d: 338, a: 7, ns: "99.9%", m: 109, ppm: "$0.3225" },
+  { r: "LAS-LAX", c: "Las Vegas -> Los Angeles", h: "SHORT", d: 236, a: 9, ns: "99.3%", m: 116, ppm: "$0.4915" },
+  { r: "PHX-LAX", c: "Phoenix -> Los Angeles", h: "SHORT", d: 370, a: 9, ns: "97.7%", m: 125, ppm: "$0.3378" },
+  { r: "BOS-DCA", c: "Boston -> Washington", h: "SHORT", d: 398, a: 6, ns: "97.4%", m: 134, ppm: "$0.3367" },
+  { r: "SEA-SFO", c: "Seattle -> San Francisco", h: "MEDIUM", d: 679, a: 8, ns: "94.9%", m: 134, ppm: "$0.1973" },
+  { r: "BOS-ORD", c: "Boston -> Chicago", h: "MEDIUM", d: 864, a: 9, ns: "98.2%", m: 138, ppm: "$0.1597" },
+  { r: "LGA-ORD", c: "New York -> Chicago", h: "MEDIUM", d: 731, a: 7, ns: "98.7%", m: 144, ppm: "$0.1970" },
+  { r: "DFW-LAX", c: "Dallas -> Los Angeles", h: "MEDIUM", d: 1232, a: 9, ns: "81.9%", m: 275, ppm: "$0.2232" },
+  { r: "BOS-LAX", c: "Boston -> Los Angeles", h: "LONG", d: 2605, a: 10, ns: "71.8%", m: 219, ppm: "$0.0841" },
+  { r: "JFK-LAX", c: "New York -> Los Angeles", h: "LONG", d: 2469, a: 7, ns: "93.6%", m: 279, ppm: "$0.1130" },
+  { r: "SFO-EWR", c: "San Francisco -> Newark", h: "LONG", d: 2559, a: 9, ns: "58.4%", m: 291, ppm: "$0.1137" },
+  { r: "SFO-JFK", c: "San Francisco -> New York", h: "LONG", d: 2580, a: 7, ns: "86.8%", m: 292, ppm: "$0.1132" }
+];
+
+function renderBars(containerId, items, maxVal) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = items.map(it => `
+    <div class="bar-row">
+      <div class="bar-label">${it.label}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(it.val/maxVal*100).toFixed(1)}%;background:${it.col}"></div></div>
+      <div class="bar-val">$${it.val.toFixed(0)}</div>
+    </div>
+  `).join("");
+}
+
+function updateDashboard() {
+  const sel = document.getElementById("haulSelect").value;
+  const d = HAUL_DATA[sel];
+  document.getElementById("kpiAvg").textContent = d.avg;
+  document.getElementById("kpiAvgSub").textContent = d.avgSub;
+  document.getElementById("kpiMin").textContent = d.min;
+  document.getElementById("kpiMinSub").textContent = d.minSub;
+  document.getElementById("kpiMax").textContent = d.max;
+  document.getElementById("kpiMaxSub").textContent = d.maxSub;
+  document.getElementById("kpiSweet").textContent = d.sweet;
+  document.getElementById("kpiSweetSub").textContent = d.sweetSub;
+  document.getElementById("kpiYield").textContent = d.yield;
+  document.getElementById("kpiYieldSub").textContent = d.yieldSub;
+  document.getElementById("kpiNonstop").textContent = d.nonstop;
+  document.getElementById("kpiNonstopSub").textContent = d.nonstopSub;
+
+  renderBars("bookingBars", d.booking, 360);
+  renderBars("airlineBars", AIRLINES, 270);
+  renderBars("dowBars", DOWS, 260);
+
+  const filtered = sel === "ALL" ? ROUTES : ROUTES.filter(x => x.h === sel);
+  document.getElementById("routeTableBody").innerHTML = filtered.map(r => {
+    const bClass = r.h === "SHORT" ? "badge-short" : r.h === "MEDIUM" ? "badge-med" : "badge-long";
+    return `<tr>
+      <td><strong>${r.r}</strong></td>
+      <td>${r.c}</td>
+      <td><span class="badge ${bClass}">${r.h}</span></td>
+      <td>${r.d} mi</td>
+      <td>${r.a}</td>
+      <td>${r.ns}</td>
+      <td><strong>$${r.m}</strong></td>
+      <td>${r.ppm}</td>
+    </tr>`;
+  }).join("");
+}
+
+updateDashboard();
+</script>
+</body>
+</html>

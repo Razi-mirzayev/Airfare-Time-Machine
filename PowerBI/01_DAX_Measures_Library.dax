@@ -1,0 +1,164 @@
+// ============================================================================
+// PROJECT: AIRFARE TIME MACHINE – US FLIGHT PRICE ANALYSIS
+// PHASE 5: POWER BI DAX MEASURES LIBRARY
+// FILE: 01_DAX_Measures_Library.dax
+// DESCRIPTION: Production-ready DAX measures for KPI Cards, Time Intelligence,
+//              Booking Window Optimization, and Conditional Formatting.
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// 1. CORE KPI CARD MEASURES (Granular Flight Prices & Daily Fares)
+// ----------------------------------------------------------------------------
+
+Avg Ticket Price ($) = 
+AVERAGE( 'fact_flight_prices'[price_usd] )
+
+Median Ticket Price ($) = 
+MEDIAN( 'fact_flight_prices'[price_usd] )
+
+Avg Daily Median Fare ($) = 
+AVERAGE( 'fact_daily_fares'[median_price_usd] )
+
+Cheapest Flight ($) = 
+MIN( 'fact_flight_prices'[price_usd] )
+
+Most Expensive Flight ($) = 
+MAX( 'fact_flight_prices'[price_usd] )
+
+Total Price Observations = 
+SUM( 'dim_routes'[price_observations] )
+
+Total Tracked Routes = 
+DISTINCTCOUNT( 'dim_routes'[route_code] )
+
+
+// ----------------------------------------------------------------------------
+// 2. DIRECT (NONSTOP) VS. CONNECTING & DURATION MEASURES
+// ----------------------------------------------------------------------------
+
+Nonstop Flight Share (%) = 
+DIVIDE(
+    CALCULATE(
+        COUNTROWS( 'fact_flight_prices' ),
+        'fact_flight_prices'[stops] = 0
+    ),
+    COUNTROWS( 'fact_flight_prices' ),
+    0
+)
+
+Avg Flight Duration (Mins) = 
+AVERAGE( 'fact_flight_prices'[duration_minutes] )
+
+Avg Flight Duration (Hours) = 
+DIVIDE( [Avg Flight Duration (Mins)], 60, 0 )
+
+Avg Nonstop Convenience Premium ($) = 
+AVERAGEX(
+    FILTER(
+        'fact_daily_fares',
+        NOT( ISBLANK( 'fact_daily_fares'[min_nonstop_price_usd] ) )
+    ),
+    'fact_daily_fares'[min_nonstop_price_usd] - 'fact_daily_fares'[min_price_usd]
+)
+
+
+// ----------------------------------------------------------------------------
+// 3. BOOKING WINDOW ("TIME MACHINE") & SWEET SPOT MEASURES
+// ----------------------------------------------------------------------------
+
+Sweet Spot Fare (31-60d) ($) = 
+CALCULATE(
+    [Avg Daily Median Fare ($)],
+    'fact_daily_fares'[days_before_departure] >= 31
+        && 'fact_daily_fares'[days_before_departure] <= 60
+)
+
+Last Minute Fare (7-14d) ($) = 
+CALCULATE(
+    [Avg Daily Median Fare ($)],
+    'fact_daily_fares'[days_before_departure] >= 7
+        && 'fact_daily_fares'[days_before_departure] <= 14
+)
+
+Sweet Spot Savings vs Last Minute ($) = 
+[Last Minute Fare (7-14d) ($)] - [Sweet Spot Fare (31-60d) ($)]
+
+Sweet Spot Savings vs Last Minute (%) = 
+DIVIDE(
+    [Sweet Spot Savings vs Last Minute ($)],
+    [Last Minute Fare (7-14d) ($)],
+    0
+)
+
+
+// ----------------------------------------------------------------------------
+// 4. DISTANCE & AVIATION YIELD (PRICE PER MILE) MEASURES
+// ----------------------------------------------------------------------------
+
+Avg Route Distance (Miles) = 
+AVERAGE( 'dim_routes'[distance_miles] )
+
+Weighted Price per Mile ($/mi) = 
+DIVIDE(
+    AVERAGE( 'dim_routes'[median_price_usd] ),
+    AVERAGE( 'dim_routes'[distance_miles] ),
+    0
+)
+
+
+// ----------------------------------------------------------------------------
+// 5. AIRLINE COMPETITION & CHEAPEST DAY LEADERSHIP
+// ----------------------------------------------------------------------------
+
+Days Won Cheapest Airline = 
+COUNTROWS( 'fact_daily_fares' )
+
+Cheapest Airline Win Share (%) = 
+DIVIDE(
+    COUNTROWS( 'fact_daily_fares' ),
+    CALCULATE(
+        COUNTROWS( 'fact_daily_fares' ),
+        ALL( 'dim_airlines' )
+    ),
+    0
+)
+
+
+// ----------------------------------------------------------------------------
+// 6. TIME INTELLIGENCE & SEASONALITY MEASURES (Requires dim_calendar)
+// ----------------------------------------------------------------------------
+
+Prev Month Avg Median Fare ($) = 
+CALCULATE(
+    [Avg Daily Median Fare ($)],
+    DATEADD( 'dim_calendar'[Date], -1, MONTH )
+)
+
+MoM Fare Change (%) = 
+VAR CurrentMonthFare = [Avg Daily Median Fare ($)]
+VAR PrevMonthFare = [Prev Month Avg Median Fare ($)]
+RETURN
+    IF(
+        NOT ISBLANK( PrevMonthFare ),
+        DIVIDE( CurrentMonthFare - PrevMonthFare, PrevMonthFare, 0 )
+    )
+
+
+// ----------------------------------------------------------------------------
+// 7. DYNAMIC UX & CONDITIONAL FORMATTING MEASURES
+// ----------------------------------------------------------------------------
+
+Selected Route Header = 
+VAR SelectedRoute = SELECTEDVALUE( 'dim_routes'[route_code], "All 50 US Domestic Routes" )
+RETURN
+    "Airfare Time Machine Analytics | Scope: " & SelectedRoute
+
+KPI Color Booking Window = 
+VAR LeadDays = SELECTEDVALUE( 'fact_daily_fares'[days_before_departure] )
+RETURN
+    SWITCH(
+        TRUE(),
+        LeadDays >= 31 && LeadDays <= 60, "#2A9D8F",  // Teal: Sweet Spot
+        LeadDays <= 14, "#E63946",                    // Red: Last-Minute Surge
+        "#457B9D"                                     // Steel Blue: Standard
+    )

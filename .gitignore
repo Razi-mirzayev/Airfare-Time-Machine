@@ -1,0 +1,17 @@
+# Byte-compiled / cache files
+__pycache__/
+*.py[cod]
+*$py.class
+.ipynb_checkpoints/
+.venv/
+venv/
+env/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Large raw dataset files exceeding GitHub's 100 MB file size limit
+# (Small lookup tables airports.csv and routes.csv ARE tracked)
+Dataset/daily_fares.csv
+Dataset/flight_prices.parquet
